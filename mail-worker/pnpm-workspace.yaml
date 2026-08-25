@@ -4,3 +4,5 @@ allowBuilds:
   esbuild: true
   sharp: true
   workerd: true
+overrides:
+  fast-xml-parser: 5.7.0
