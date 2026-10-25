@@ -1,12 +1,33 @@
-name = "cloud-mail"
+# ============================================================================
+# OPC-design 分支专用配置（Worker: cloud-mail-opc / 域名: mail.supracept.work）
+# 本文件即 OPC 实例的 wrangler.toml。此前曾用独立的 wrangler-opc.toml + `-c`
+# 部署，因 Workers Builds 的一致性检查会比对 wrangler.toml 的 name 与实际部署
+# 的 Worker（并在 Wrangler v3.109.0+ 自动发 PR "修复"），已改为本分支
+# wrangler.toml 直接承载 OPC 配置；原 wrangler-opc.toml 已删除。
+#
+# 分支差异警告：deploy 分支上的同名文件是生产配置（cloud-mail @
+# mail.jaspershadow.dpdns.org，D1 jaspermail / KV e27cda1b… / R2 jaspermail），
+# 两个分支的 wrangler.toml 内容不同，属预期。
+#
+# 规则：
+# 1. 本分支部署：pnpm deploy 或 npx wrangler deploy（无需 -c）；
+#    Workers Builds 连接本分支时 Deploy command 用默认的 npx wrangler deploy。
+# 2. 从 deploy/main sync 合并时 wrangler.toml 必然冲突：保留本分支全部 OPC
+#    取值（name / routes / d1 / kv / r2 / domain / admin），其余取上游。
+# 3. 严禁把本文件合入 deploy 或 main（会污染生产配置与同步基线）。
+# ============================================================================
+
+name = "cloud-mail-opc"
 main = "src/index.js"
 compatibility_date = "2025-06-04"
 keep_vars = true
 
-# 自定义域名路由：Dashboard 侧已绑定 mail.jaspershadow.dpdns.org。
+workers_dev = false   # 关闭 workers.dev 公共入口，仅通过自定义域名访问
+
+# 自定义域名路由：首次部署时由 wrangler 自动创建对应 DNS 记录。
 # 若此处缺失，wrangler 部署时会把它视为"远端多余配置"并从 Worker 上摘除。
 [[routes]]
-pattern = "mail.jaspershadow.dpdns.org"
+pattern = "mail.supracept.work"
 custom_domain = true
 
 [observability]
@@ -14,16 +35,16 @@ enabled = true
 
 [[d1_databases]]
 binding = "db"			#d1数据库绑定名默认不可修改
-database_name = "jaspermail"		#d1数据库名字
-database_id = "0b186691-fb70-42ea-8944-5a8d2fcae097"		#d1数据库id
+database_name = "opcmail"	#d1数据库名字
+database_id = "add32c26-0da8-4e93-b6fb-7ad047aeb682"		#d1数据库id（2026-10-25 创建，APAC）
 
 [[kv_namespaces]]
 binding = "kv"			#kv绑定名默认不可修改
-id = "e27cda1bbbef4fddb0726b63c75810e6"					#kv数据库id
+id = "ec79b98867aa426a8ed060bddbb6f507"					#kv命名空间id（2026-10-25 创建，标题 opcmail-kv）
 
 [[r2_buckets]]
 binding = "r2"			#r2对象存储绑定名默认不可修改
-bucket_name = "jaspermail"		#r2对象存储桶的名字
+bucket_name = "jasper-opcmail"	#r2对象存储桶的名字（2026-10-25 创建，全局唯一）
 
 #[[send_email]]
 #name = "email"			#CF发件, 配置后优先使用
@@ -49,12 +70,13 @@ ai_model = "@cf/meta/llama-3.1-8b-instruct-fast"			#ai模型,不填默认使用@
 analysis_cache = false			#是否开启分析数据缓存
 orm_log = false			#是否sql日志
 domain = [
-	"jaspershadow.dpdns.org"
+	"supracept.work"
 ]				#邮件域名可可配置多个 示例: ["example1.com","example2.com"]
-admin = "jasperhwang@jaspershadow.dpdns.org"					#管理员的邮箱	示例: admin@example.com
-# jwt_secret 不写在此处：本仓库为公共库。请在 Dashboard → Workers & Pages → cloud-mail
+admin = "supracept@supracept.work"					#管理员的邮箱	示例: admin@example.com
+# jwt_secret 不写在此处：本仓库为公共库。请在 Dashboard → Workers & Pages → cloud-mail-opc
 # → Settings → Variables and Secrets 中以「Secret」类型保存 jwt_secret（名称必须完全一致）。
-# Wrangler 部署时始终保留远端 Secret（keepSecrets 恒为 true），不会被覆盖或清空。
+# 取值必须与生产实例（cloud-mail）不同；建议 openssl rand -hex 32（仅 0-9a-f，URL 安全，
+# 因为该值会出现在 /api/init/<secret> 路径里）。wrangler deploy 恒 keepSecrets:true，不清空。
 
 [build]
 command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"
