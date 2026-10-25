@@ -3,6 +3,12 @@ main = "src/index.js"
 compatibility_date = "2025-06-04"
 keep_vars = true
 
+# 自定义域名路由：Dashboard 侧已绑定 mail.jaspershadow.dpdns.org。
+# 若此处缺失，wrangler 部署时会把它视为"远端多余配置"并从 Worker 上摘除。
+[[routes]]
+pattern = "mail.jaspershadow.dpdns.org"
+custom_domain = true
+
 [observability]
 enabled = true
 
