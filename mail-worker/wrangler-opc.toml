@@ -1,0 +1,71 @@
+# ============================================================================
+# OPC 隔离实例专用配置（Worker: cloud-mail-opc / 域名: mail.supracept.work）
+# 仅存在于 OPC-design 分支；上游仓库无此文件，从 main sync 合并零冲突。
+# 唯一合法部署方式：npx wrangler deploy -c wrangler-opc.toml
+# 警告：本分支严禁执行不带 -c 的 wrangler deploy —— 那会用 wrangler.toml
+#       （仍指向生产 jaspermail 资源）把本分支代码部署到生产 Worker！
+# ============================================================================
+
+name = "cloud-mail-opc"
+main = "src/index.js"
+compatibility_date = "2025-06-04"
+keep_vars = true
+
+workers_dev = false   # 关闭 workers.dev 公共入口，仅通过自定义域名访问
+
+# 自定义域名路由：首次部署时由 wrangler 自动创建对应 DNS 记录。
+# 若此处缺失，wrangler 部署时会把它视为"远端多余配置"并从 Worker 上摘除。
+[[routes]]
+pattern = "mail.supracept.work"
+custom_domain = true
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "db"			#d1数据库绑定名默认不可修改
+database_name = "opcmail"	#d1数据库名字
+database_id = "add32c26-0da8-4e93-b6fb-7ad047aeb682"		#d1数据库id（2026-10-25 创建，APAC）
+
+[[kv_namespaces]]
+binding = "kv"			#kv绑定名默认不可修改
+id = "ec79b98867aa426a8ed060bddbb6f507"					#kv命名空间id（2026-10-25 创建，标题 opcmail-kv）
+
+[[r2_buckets]]
+binding = "r2"			#r2对象存储绑定名默认不可修改
+bucket_name = "jasper-opcmail"	#r2对象存储桶的名字（2026-10-25 创建，全局唯一）
+
+#[[send_email]]
+#name = "email"			#CF发件, 配置后优先使用
+
+[[send_email]]
+name = "forward"		#站内转发到已验证的其他邮箱，不限制单个地址
+
+[ai]
+binding = "ai"
+
+[assets]
+binding = "assets"		#静态资源绑定名默认不可修改
+directory = "./dist"	#前端vue项目打包的静态资源存放位置,默认dist
+not_found_handling = "single-page-application"
+run_worker_first = true
+
+[triggers]
+crons = ["0 * * * *"]	#每小时执行；resetDaySendCount 仅在 UTC 0 点生效
+
+
+[vars]
+ai_model = "@cf/meta/llama-3.1-8b-instruct-fast"			#ai模型,不填默认使用@cf/meta/llama-3.1-8b-instruct-fast
+analysis_cache = false			#是否开启分析数据缓存
+orm_log = false			#是否sql日志
+domain = [
+	"supracept.work"
+]				#邮件域名可可配置多个 示例: ["example1.com","example2.com"]
+admin = "admin@supracept.work"					#管理员的邮箱	示例: admin@example.com
+# jwt_secret 不写在此处：本仓库为公共库。请在 Dashboard → Workers & Pages → cloud-mail-opc
+# → Settings → Variables and Secrets 中以「Secret」类型保存 jwt_secret（名称必须完全一致）。
+# 取值必须与生产实例（cloud-mail）不同；建议 openssl rand -hex 32（仅 0-9a-f，URL 安全，
+# 因为该值会出现在 /api/init/<secret> 路径里）。wrangler deploy 恒 keepSecrets:true，不清空。
+
+[build]
+command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"

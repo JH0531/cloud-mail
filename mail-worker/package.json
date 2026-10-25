@@ -6,6 +6,7 @@
     "dev": "wrangler dev --config wrangler-dev.toml",
     "test": "wrangler deploy --config wrangler-test.toml",
     "deploy": "wrangler deploy",
+    "deploy:opc": "wrangler deploy --config wrangler-opc.toml",
     "start": "wrangler dev"
   },
   "devDependencies": {
