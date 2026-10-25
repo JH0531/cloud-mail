@@ -13,5 +13,10 @@
 - 自定义域名：`[[routes]] pattern = "mail.jaspershadow.dpdns.org" custom_domain = true`。
 - `jwt_secret` 不入库，走 Dashboard Secret（wrangler deploy 恒为 `keepSecrets: true`，不会被清空）。
 
+## 数据库升级约定
+- 每次 fork sync 合并上游新版本并部署后，必须手动访问 `https://<站点域名>/api/init/<jwt_secret>` 执行一次迁移（幂等，可重复）。
+- 路径必须带 `/api` 前缀：不带前缀会被 SPA 兜底成前端页面，迁移不会执行。
+- 弹窗「请按照文档更新数据库」= `hono.js:28` 捕获到 `D1_ERROR: no such column`，说明代码引用了迁移尚未添加的列。
+
 ## 本地补丁（需在 sync 时保留）
 - `mail-worker/src/service/r2-service.js` 中带 `[local]` 注释的 KV 回退读取（R2 未命中时回落 KV），用于 R2/KV 双写过渡期兼容历史附件。上游如改动该文件，合并时保留此逻辑。
