@@ -48,7 +48,12 @@ const r2Service = {
 		}
 
 		if (storageType === 'R2') {
-			return await c.env.r2.get(key);
+			const obj = await c.env.r2.get(key);
+			if (obj) {
+				return obj;
+			}
+			// [local] 迁移兜底：切换到 R2 之前写入的历史对象仍在 KV，R2 未命中时回退 KV 读取
+			return await kvObjService.getObj(c, key);
 		}
 
 		if (storageType === 'S3') {
@@ -71,7 +76,8 @@ const r2Service = {
 			if (storageType === 'R2') {
 				const obj = await c.env.r2.get(key);
 				if (!obj) {
-					return null;
+					// [local] 迁移兜底：历史对象仍在 KV
+					return await kvObjService.getObj(c, key);
 				}
 				return new Response(obj.body, {
 					headers: {
