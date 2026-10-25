@@ -46,7 +46,9 @@ domain = [
 	"jaspershadow.dpdns.org"
 ]				#邮件域名可可配置多个 示例: ["example1.com","example2.com"]
 admin = "jasperhwang@jaspershadow.dpdns.org"					#管理员的邮箱	示例: admin@example.com
-jwt_secret = ""			#jwt令牌的密钥,随便填一串字符串
+# jwt_secret 不写在此处：本仓库为公共库。请在 Dashboard → Workers & Pages → cloud-mail
+# → Settings → Variables and Secrets 中以「Secret」类型保存 jwt_secret（名称必须完全一致）。
+# Wrangler 部署时始终保留远端 Secret（keepSecrets 恒为 true），不会被覆盖或清空。
 
 [build]
 command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"
