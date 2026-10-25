@@ -23,11 +23,12 @@
 - `mail-worker/src/service/r2-service.js` 中带 `[local]` 注释的 KV 回退读取（R2 未命中时回落 KV），用于 R2/KV 双写过渡期兼容历史附件。上游如改动该文件，合并时保留此逻辑。
 
 ## OPC 隔离实例（OPC-design 分支，2026-10-25 建）
-- 分支 `OPC-design`：自 deploy 创建并推送 origin；**永不合入 main**（main 是 fork 同步源，且 push main 会触发 `.github/workflows/deploy-cloudflare.yml` 用 wrangler-action.toml 误部署）。同步链路固定 `upstream/main → deploy → OPC-design`，wrangler-opc.toml 为新文件、sync 零冲突，`[local]` 补丁经 deploy 自动继承。
-- Worker `cloud-mail-opc`，域名 `mail.supracept.work`，`workers_dev = false`，cron 每小时。配置在 `mail-worker/wrangler-opc.toml`；package.json 有 `deploy:opc` script。
-- **唯一合法部署命令：`wrangler deploy -c wrangler-opc.toml`**；严禁不带 `-c`（wrangler.toml 仍指向生产 jaspermail 资源，误部署会把代码推到生产 Worker）。
+- 分支 `OPC-design`：自 deploy 创建并推送 origin；**永不合入 main**（main 是 fork 同步源，且 push main 会触发 `.github/workflows/deploy-cloudflare.yml` 用 wrangler-action.toml 误部署）。同步链路固定 `upstream/main → deploy → OPC-design`；合并时 wrangler.toml 必冲突（两个分支同名文件内容不同），保留本分支 OPC 取值、其余取上游；`[local]` 补丁经 deploy 自动继承。
+- Worker `cloud-mail-opc`，域名 `mail.supracept.work`，`workers_dev = false`，cron 每小时。**本分支的 `mail-worker/wrangler.toml` 即 OPC 配置**（deploy 分支同名文件是生产配置，内容不同属预期）；原 wrangler-opc.toml 与 deploy:opc script 已删除（原因：Workers Builds 一致性检查 + 自动 PR 风险）。
+- 本分支部署命令：`pnpm deploy` / `npx wrangler deploy`（裸命令即 OPC 配置）；Workers Builds 的 Deploy command 用默认值。严禁把 OPC 取值的 wrangler.toml 合入 deploy/main。
 - 资源与生产完全隔离：D1 `opcmail` / `add32c26-0da8-4e93-b6fb-7ad047aeb682`（APAC）；KV `opcmail-kv` / `ec79b98867aa426a8ed060bddbb6f507`；R2 桶 `jasper-opcmail`。`jwt_secret` 走 cloud-mail-opc 的 Dashboard Secret（值与生产不同，勿记录到记忆文件）。
 - 迁移约定：OPC 实例每次部署后访问 `https://mail.supracept.work/api/init/<OPC_SECRET>`（幂等，带 /api 前缀）。
 - supracept.work apex 预留给另一 OPC web SaaS：SaaS **不得使用 `*.supracept.work` 通配 Worker 路由**（通配 DNS 无害，具体记录优先）；Email Routing catch-all 为 zone 级唯一规则，如需收件归 cloud-mail-opc，与 SaaS 协商。
 - 本地部署坑：pnpm 10 的 `pnpm --prefix ../mail-vue install` 静默 no-op（不建 node_modules），wrangler `[build]` 段会 vite not found；先 `cd mail-vue && pnpm install` 再部署。Cloudflare Linux 构建环境无此问题。
-- 遗留（需用户操作）：Dashboard 连接 Workers Builds 监听 OPC-design（Root=mail-worker，Deploy=`npx wrangler deploy -c wrangler-opc.toml`）；浏览器注册 admin@supracept.work 后关闭注册；如需收件再配 Email Routing。
+- 遗留（需用户操作）：Dashboard 连接 Workers Builds 监听 OPC-design（Root=mail-worker，Deploy command 用默认 `npx wrangler deploy`）；浏览器注册 supracept@supracept.work（= env.admin，注册即管理员，权限运行时判定）后关闭注册；如需收件再配 Email Routing。
+- admin 权限机制（代码核实）：`user-service.js` 等在运行时比对 `email === c.env.admin`，命中即注入 ADMIN_ROLE 与全部权限——改 env.admin 后重新登录即生效，无需改数据库。
