@@ -61,7 +61,7 @@ orm_log = false			#是否sql日志
 domain = [
 	"supracept.work"
 ]				#邮件域名可可配置多个 示例: ["example1.com","example2.com"]
-admin = "admin@supracept.work"					#管理员的邮箱	示例: admin@example.com
+admin = "supracept@supracept.work"					#管理员的邮箱	示例: admin@example.com
 # jwt_secret 不写在此处：本仓库为公共库。请在 Dashboard → Workers & Pages → cloud-mail-opc
 # → Settings → Variables and Secrets 中以「Secret」类型保存 jwt_secret（名称必须完全一致）。
 # 取值必须与生产实例（cloud-mail）不同；建议 openssl rand -hex 32（仅 0-9a-f，URL 安全，
